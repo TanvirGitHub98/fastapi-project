@@ -2,15 +2,24 @@ from random import randrange
 from fastapi import  FastAPI, HTTPException, Response,status
 from fastapi.params import Body
 from pydantic import BaseModel, Field
+import psycopg2
+from psycopg2.extras import RealDictCursor
 app=FastAPI()
 
 class User(BaseModel):
-    name:str
-    age:int =Field(strict=True)
+    title:str
+    content:int =Field(strict=True)
+    published:bool=True
  
+try:
+    conn=psycopg2.connect(host='localhost',database='fastapi',user='postgres',password='3149',cursor_factory=RealDictCursor)
+    cursor=conn.cursor()
+    print("Succesfully Connected")
+except Exception as error:
+    print("Failled To connect with DB")
+    print('Error',error)    
 
-
-myUser=[{"id":1,"name":"Rony","age":30},{"id":2,"name":"Mimi","age":20}]   
+myUser=[{"id":1,"title":"Api title 1","content":"Api content 1"},{"id":2,"title":"Api title 2","content":"Api content 2"}]   
 
 def checkId(id):
         
