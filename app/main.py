@@ -2,27 +2,26 @@ from random import randrange
 from fastapi import  FastAPI, HTTPException, Response,status
 from fastapi.params import Body
 from pydantic import BaseModel, Field
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import psycopg2 
 from psycopg2.extras import RealDictCursor 
 app=FastAPI()
 
-class User(BaseModel):
+class Post(BaseModel):
     title:str
-    content:int =Field(strict=True)
+    content:str
     published:bool=True
  
-
-
 try:
-    conn=psycopg2.connect(host='localhost', database='fastApi',user="postgres",password='3149', cursor_factory=RealDictCursor)
+    conn=psycopg2.connect(host='localhost',database='fastapi',user='postgres',password='3149',cursor_factory=RealDictCursor)
     cursor=conn.cursor()
-    print("Database connection successfull")
+    print("Succesfully Connected")
 except Exception as error:
-    print("Failled to Db Conn")
-    print("Error: ",error)
-    
+    print("Failled To connect with DB")
+    print('Error',error)    
 
-myUser=[{"id":1,"title":"title of post 1","content":"content of post 1"},{"id":2,"title":"title of post 2","content":"content of post 2"}]   
+myUser=[{"id":1,"title":"Api title 1","content":"Api content 1"},{"id":2,"title":"Api title 2","content":"Api content 2"}]   
 
 def checkId(id):
         
@@ -32,7 +31,7 @@ def checkId(id):
          
 
 
-def findUserForById(id):
+def findPostForById(id):
     for i,p in enumerate(myUser):
         if p['id']==id:
             return i
@@ -41,48 +40,52 @@ def findUserForById(id):
 
 @app.get('/')
 async def root():
-    return{"All User":myUser}
+    cursor.execute("""SELECT * FROM posts """)
+    posts=cursor.fetchall()
+    return{"All Post":posts}
 
-@app.post('/createAccount',status_code=status.HTTP_201_CREATED)
-async def createAccount(newUser:User):
-    userDict=newUser.model_dump()
-    userDict['id']=randrange(0,1000000)
-    myUser.append(userDict)
+@app.post('/createPost',status_code=status.HTTP_201_CREATED)
+async def createPost(post:Post):
+   cursor.execute("""INSERT INTO posts(title,content,published) VALUES(%s,%s,%s) RETURNING * """,(post.title,post.content,post.published))
+   new_post=cursor.fetchone()
+   conn.commit()
+   return{
+       "new_post":new_post
+   }
+  
     
-    
-    return{
-        "new User": myUser
-    }
-    
-@app.get('/getById/{id}')
-async def getById(id:int):
-    Id=checkId(id)
-    if not Id:
+@app.get('/postgetById/{id}')
+async def postGetById(id:int):
+    cursor.execute("""SELECT * FROM posts WHERE ID=%s """,(str(id)))
+    post=cursor.fetchone()
+    if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"Post with id :{id} not found")
         return
     return{
-        "Id":Id
+        "Id":post
     }
     
     
-@app.delete('/deleteUserById/{id}',status_code=status.HTTP_204_NO_CONTENT)
-async def deleteUserById(id:int):
+@app.delete('/deletePostById/{id}',status_code=status.HTTP_204_NO_CONTENT)
+async def deletePostById(id:int):
     
-    res=findUserForById(id)
-    if res is None:
+    cursor.execute("""DELETE FROM posts WHERE id=%s RETURNING *""",(str(id)))
+    deleted_post=cursor.fetchone()
+    conn.commit()
+    if deleted_post is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"User Id: {id} Not Found")
     else:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
         
 
-@app.put('/updateUserById/{id}')
-async def updateUser(id:int,user:User):
-    index=findUserForById(id)
-    if index is None:
+@app.put('/updatePostById/{id}')
+async def updatePost(id:int,post:Post):
+    cursor.execute("""UPDATE posts SET  title=%s, content=%s,published=%s  WHERE ID=%s RETURNING *""",(post.title,post.content,post.published,str(id)))
+    updated_Post=cursor.fetchone()
+    conn.commit()
+    
+    if updated_Post is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"Id {id} is not available")
 
-    userData=user.model_dump()
-    userData['id']=id
-    myUser[index]=userData
-    return {"message": "User updated successfully", "updatedUser": userData}
+    return {"message": "Post updated successfully", "updatedPost": updated_Post}
 
