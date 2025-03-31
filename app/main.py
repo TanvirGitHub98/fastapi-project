@@ -4,8 +4,7 @@ from fastapi.params import Body
 from pydantic import BaseModel, Field
 import psycopg2
 from psycopg2.extras import RealDictCursor
-import psycopg2 
-from psycopg2.extras import RealDictCursor 
+
 app=FastAPI()
 
 class Post(BaseModel):
@@ -14,7 +13,10 @@ class Post(BaseModel):
     published:bool=True
  
 try:
-    conn=psycopg2.connect(host='localhost',database='fastapi',user='postgres',password='3149',cursor_factory=RealDictCursor)
+    #For windows
+    conn=psycopg2.connect(host='localhost',database='fastApi',user='postgres',password='3149',cursor_factory=RealDictCursor)
+    # For Mac
+    # conn=psycopg2.connect(host='localhost',database='fastApi',user='postgres',password='3149',cursor_factory=RealDictCursor)
     cursor=conn.cursor()
     print("Succesfully Connected")
 except Exception as error:
