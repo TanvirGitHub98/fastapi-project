@@ -1,11 +1,10 @@
 from random import randrange
 from fastapi import  Depends, FastAPI, HTTPException, Response,status
 from fastapi.params import Body
-from pydantic import BaseModel, Field
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import time
-from . import models
+from . import models,schemas
 from .database import engine,get_db
 from sqlalchemy.orm import Session
 #related to db
@@ -16,10 +15,6 @@ app=FastAPI()
 
 
 
-class Post(BaseModel):
-    title:str
-    content:str
-    published:bool=True
  
 try:
     #For windows
@@ -61,7 +56,7 @@ async def getPosts(db: Session=Depends(get_db)):
     return{"All Post":posts}
 
 @app.post('/createPost',status_code=status.HTTP_201_CREATED)
-async def createPost(post:Post,db:Session=Depends(get_db)):
+async def createPost(post:schemas.Postcreate,db:Session=Depends(get_db)):
 #    cursor.execute("""INSERT INTO posts(title,content,published) VALUES(%s,%s,%s) RETURNING * """,(post.title,post.content,post.published))
 #    new_post=cursor.fetchone()
 #    conn.commit()
@@ -77,9 +72,10 @@ async def createPost(post:Post,db:Session=Depends(get_db)):
   
     
 @app.get('/postgetById/{id}')
-async def postGetById(id:int):
-    cursor.execute("""SELECT * FROM posts WHERE ID=%s """,(str(id)))
-    post=cursor.fetchone()
+async def postGetById(id:int,db:Session=Depends(get_db)):
+    # cursor.execute("""SELECT * FROM posts WHERE ID=%s """,(str(id)))
+    # post=cursor.fetchone()
+    post=db.query(models.Post).filter(models.Post.id==id).all()
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"Post with id :{id} not found")
         return
@@ -89,30 +85,34 @@ async def postGetById(id:int):
     
     
 @app.delete('/deletePostById/{id}',status_code=status.HTTP_204_NO_CONTENT)
-async def deletePostById(id:int):
+async def deletePostById(id:int,db:Session=Depends(get_db)):
     
-    cursor.execute("""DELETE FROM posts WHERE id=%s RETURNING *""",(str(id)))
-    deleted_post=cursor.fetchone()
-    conn.commit()
-    if deleted_post is None:
+    # cursor.execute("""DELETE FROM posts WHERE id=%s RETURNING *""",(str(id)))
+    # deleted_post=cursor.fetchone()
+    # conn.commit()
+    deleted_post=db.query(models.Post).filter(models.Post.id==id)
+    if deleted_post.first() is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"User Id: {id} Not Found")
-    else:
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    
+    deleted_post.delete(synchronize_session=False)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
         
 
 @app.put('/updatePostById/{id}')
-async def updatePost(id:int,post:Post):
-    cursor.execute("""UPDATE posts SET  title=%s, content=%s,published=%s  WHERE ID=%s RETURNING *""",(post.title,post.content,post.published,str(id)))
-    updated_Post=cursor.fetchone()
-    conn.commit()
+async def updatePost(id:int,post:schemas.Postcreate,db:Session=Depends(get_db)):
+    # cursor.execute("""UPDATE posts SET  title=%s, content=%s,published=%s  WHERE ID=%s RETURNING *""",(post.title,post.content,post.published,str(id)))
+    # updated_Post=cursor.fetchone()
+    # conn.commit()
     
-    if updated_Post is None:
+    updated_query=db.query(models.Post).filter(models.Post.id==id)
+    Updated_post=updated_query.first()
+    
+    if Updated_post is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"Id {id} is not available")
+    
+    updated_query.update(post.model_dump(),synchronize_session=False)
+    db.commit()
+    return {"message": "Post updated successfully", "updatedPost": updated_query.first()}
 
-    return {"message": "Post updated successfully", "updatedPost": updated_Post}
 
-
-@app.get('/sqlalchemy')
-def test_post(db: Session=Depends(get_db)):
-    posts= db.query(models.Post).all()
-    return{"status":posts}
