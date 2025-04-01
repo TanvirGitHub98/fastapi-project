@@ -1,11 +1,20 @@
 from random import randrange
-from fastapi import  FastAPI, HTTPException, Response,status
+from fastapi import  Depends, FastAPI, HTTPException, Response,status
 from fastapi.params import Body
 from pydantic import BaseModel, Field
 import psycopg2
 from psycopg2.extras import RealDictCursor
+import time
+from . import models
+from .database import engine,get_db
+from sqlalchemy.orm import Session
+#related to db
+models.Base.metadata.create_all(bind=engine)
+
 
 app=FastAPI()
+
+
 
 class Post(BaseModel):
     title:str
@@ -16,7 +25,7 @@ try:
     #For windows
     conn=psycopg2.connect(host='localhost',database='fastApi',user='postgres',password='3149',cursor_factory=RealDictCursor)
     # For Mac
-    # conn=psycopg2.connect(host='localhost',database='fastApi',user='postgres',password='3149',cursor_factory=RealDictCursor)
+    # conn=psycopg2.connect(host='localhost',database='fastapi',user='postgres',password='3149',cursor_factory=RealDictCursor)
     cursor=conn.cursor()
     print("Succesfully Connected")
 except Exception as error:
@@ -38,19 +47,30 @@ def findPostForById(id):
         if p['id']==id:
             return i
           
-    
-
-@app.get('/')
+@app.get('/') 
 async def root():
-    cursor.execute("""SELECT * FROM posts """)
-    posts=cursor.fetchall()
+    return{"status":"Welcome To FastApI"} 
+
+@app.get('/posts')
+async def getPosts(db: Session=Depends(get_db)):
+    # cursor.execute("""SELECT * FROM posts """)
+    # posts=cursor.fetchall()
+    
+    #using orm alchemy
+    posts=db.query(models.Post).all()
     return{"All Post":posts}
 
 @app.post('/createPost',status_code=status.HTTP_201_CREATED)
-async def createPost(post:Post):
-   cursor.execute("""INSERT INTO posts(title,content,published) VALUES(%s,%s,%s) RETURNING * """,(post.title,post.content,post.published))
-   new_post=cursor.fetchone()
-   conn.commit()
+async def createPost(post:Post,db:Session=Depends(get_db)):
+#    cursor.execute("""INSERT INTO posts(title,content,published) VALUES(%s,%s,%s) RETURNING * """,(post.title,post.content,post.published))
+#    new_post=cursor.fetchone()
+#    conn.commit()
+
+   #new_post=models.Post(title=post.title, content=post.content, published=post.published)#this line we can make short, lets see
+   new_post=models.Post(**post.model_dump())# This is the shorter version
+   db.add(new_post)
+   db.commit()
+   db.refresh(new_post)  #returns the new created post
    return{
        "new_post":new_post
    }
@@ -91,3 +111,8 @@ async def updatePost(id:int,post:Post):
 
     return {"message": "Post updated successfully", "updatedPost": updated_Post}
 
+
+@app.get('/sqlalchemy')
+def test_post(db: Session=Depends(get_db)):
+    posts= db.query(models.Post).all()
+    return{"status":posts}
