@@ -10,3 +10,9 @@ class Basepost(BaseModel):
     
 class Postcreate(Basepost):
     pass
+
+
+class Postresponse(Basepost):
+    id:int
+    class Config:  # For Pydantic v1
+        orm_mode = True

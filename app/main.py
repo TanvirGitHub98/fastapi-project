@@ -1,4 +1,5 @@
 from random import randrange
+from typing import List
 from fastapi import  Depends, FastAPI, HTTPException, Response,status
 from fastapi.params import Body
 import psycopg2
@@ -46,16 +47,16 @@ def findPostForById(id):
 async def root():
     return{"status":"Welcome To FastApI"} 
 
-@app.get('/posts')
+@app.get('/getAllPosts',response_model=List[schemas.Postresponse])
 async def getPosts(db: Session=Depends(get_db)):
     # cursor.execute("""SELECT * FROM posts """)
     # posts=cursor.fetchall()
     
     #using orm alchemy
     posts=db.query(models.Post).all()
-    return{"All Post":posts}
+    return posts
 
-@app.post('/createPost',status_code=status.HTTP_201_CREATED)
+@app.post('/createPost',status_code=status.HTTP_201_CREATED,response_model=schemas.Postresponse)
 async def createPost(post:schemas.Postcreate,db:Session=Depends(get_db)):
 #    cursor.execute("""INSERT INTO posts(title,content,published) VALUES(%s,%s,%s) RETURNING * """,(post.title,post.content,post.published))
 #    new_post=cursor.fetchone()
@@ -66,22 +67,20 @@ async def createPost(post:schemas.Postcreate,db:Session=Depends(get_db)):
    db.add(new_post)
    db.commit()
    db.refresh(new_post)  #returns the new created post
-   return{
-       "new_post":new_post
-   }
+   return new_post
+   
   
     
-@app.get('/postgetById/{id}')
+@app.get('/postgetById/{id}',response_model=schemas.Postresponse)
 async def postGetById(id:int,db:Session=Depends(get_db)):
     # cursor.execute("""SELECT * FROM posts WHERE ID=%s """,(str(id)))
     # post=cursor.fetchone()
-    post=db.query(models.Post).filter(models.Post.id==id).all()
+    post=db.query(models.Post).filter(models.Post.id==id).first()
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"Post with id :{id} not found")
-        return
-    return{
-        "Id":post
-    }
+        
+    return post
+    
     
     
 @app.delete('/deletePostById/{id}',status_code=status.HTTP_204_NO_CONTENT)
@@ -99,7 +98,7 @@ async def deletePostById(id:int,db:Session=Depends(get_db)):
     return Response(status_code=status.HTTP_204_NO_CONTENT)
         
 
-@app.put('/updatePostById/{id}')
+@app.put('/updatePostById/{id}',response_model=schemas.Postresponse)
 async def updatePost(id:int,post:schemas.Postcreate,db:Session=Depends(get_db)):
     # cursor.execute("""UPDATE posts SET  title=%s, content=%s,published=%s  WHERE ID=%s RETURNING *""",(post.title,post.content,post.published,str(id)))
     # updated_Post=cursor.fetchone()
@@ -113,6 +112,6 @@ async def updatePost(id:int,post:schemas.Postcreate,db:Session=Depends(get_db)):
     
     updated_query.update(post.model_dump(),synchronize_session=False)
     db.commit()
-    return {"message": "Post updated successfully", "updatedPost": updated_query.first()}
+    return updated_query.first()
 
 
