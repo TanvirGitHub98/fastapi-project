@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from .. import models,schemas
+from .. import models,schemas,oauth2
 from ..database import get_db
 from fastapi import  Depends, HTTPException, Response,status,APIRouter
 from typing import List
@@ -10,7 +10,7 @@ router=APIRouter(
 )
 
 @router.get('/getAllPosts',response_model=List[schemas.Postresponse])
-async def getPosts(db: Session=Depends(get_db)):
+async def getPosts(db: Session=Depends(get_db),get_current_user:int=Depends(oauth2.get_current_user)):
     # cursor.execute("""SELECT * FROM posts """)
     # posts=cursor.fetchall()
     
@@ -19,7 +19,7 @@ async def getPosts(db: Session=Depends(get_db)):
     return posts
 
 @router.post('/createPost',status_code=status.HTTP_201_CREATED,response_model=schemas.Postresponse)
-async def createPost(post:schemas.Postcreate,db:Session=Depends(get_db)):
+async def createPost(post:schemas.Postcreate,db:Session=Depends(get_db),get_current_user:int=Depends(oauth2.get_current_user)):
 #    cursor.execute("""INSERT INTO posts(title,content,published) VALUES(%s,%s,%s) RETURNING * """,(post.title,post.content,post.published))
 #    new_post=cursor.fetchone()
 #    conn.commit()

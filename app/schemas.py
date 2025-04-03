@@ -1,4 +1,5 @@
 from pydantic import BaseModel,EmailStr
+from typing import Optional
 
 #pydantic model used for request & response, does not interact with db
 
@@ -34,3 +35,11 @@ class UserOut(BaseModel):
 class UserLogin(BaseModel):
     email:EmailStr
     password:str
+    
+    
+class Token(BaseModel):
+    access_token:str
+    token_type:str
+    
+class TokenData(BaseModel):
+    id:Optional['str']=None        
