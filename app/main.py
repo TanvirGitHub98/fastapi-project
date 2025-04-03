@@ -9,6 +9,7 @@ from . import models,schemas,utils
 from .database import engine,get_db
 
 from .routers import post,user,auth
+from fastapi.openapi.utils import get_openapi
 
 #related to db
 models.Base.metadata.create_all(bind=engine)

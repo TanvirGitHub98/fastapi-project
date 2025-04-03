@@ -54,11 +54,14 @@ async def deletePostById(id:int,db:Session=Depends(get_db),current_user: int=Dep
     # cursor.execute("""DELETE FROM posts WHERE id=%s RETURNING *""",(str(id)))
     # deleted_post=cursor.fetchone()
     # conn.commit()
-    deleted_post=db.query(models.Post).filter(models.Post.id==id)
-    if deleted_post.first() is None:
+    deleted_post=db.query(models.Post).filter(models.Post.id==id).first()
+    if deleted_post is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"User Id: {id} Not Found")
     
-    deleted_post.delete(synchronize_session=False)
+    if deleted_post.owner_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail="No authorized permission to perform the requested operation")
+    
+    db.delete(deleted_post)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
         
@@ -74,6 +77,9 @@ async def updatePost(id:int,post:schemas.Postcreate,db:Session=Depends(get_db),c
     
     if Updated_post is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"Id {id} is not available")
+    
+    if Updated_post.owner_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail="No authorized permission to perform the requested operation")
     
     updated_query.update(post.model_dump(),synchronize_session=False)
     db.commit()

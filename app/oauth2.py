@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 #Expiration_time
 oauth2_scheme=OAuth2PasswordBearer(tokenUrl='login')
 
+
+
 SECRET_KEY="helloIamjj"
 ALGORITHM="HS256"
 ACCESS_TOKEN_EXPIRES_MINUTES=30
@@ -48,6 +50,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     )
 
     try:
+        print("Token",token)
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("user_id")
 
