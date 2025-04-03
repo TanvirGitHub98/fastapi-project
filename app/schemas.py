@@ -15,6 +15,7 @@ class Postcreate(Basepost):
 
 class Postresponse(Basepost):
     id:int
+    owner_id:int
     class Config:  # For Pydantic v1
         orm_mode = True
 
