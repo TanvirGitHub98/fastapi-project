@@ -20,32 +20,20 @@ app=FastAPI()
 
 
 
- 
-try:
-    #For windows
-    conn=psycopg2.connect(host='localhost',database='fastApi',user='postgres',password='3149',cursor_factory=RealDictCursor)
-    # For Mac
-    # conn=psycopg2.connect(host='localhost',database='fastapi',user='postgres',password='3149',cursor_factory=RealDictCursor)
-    cursor=conn.cursor()
-    print("Succesfully Connected")
-except Exception as error:
-    print("Failled To connect with DB")
-    print('Error',error)    
+# myUser=[{"id":1,"title":"Api title 1","content":"Api content 1"},{"id":2,"title":"Api title 2","content":"Api content 2"}]   
 
-myUser=[{"id":1,"title":"Api title 1","content":"Api content 1"},{"id":2,"title":"Api title 2","content":"Api content 2"}]   
-
-def checkId(id):
+# def checkId(id):
         
- for p in myUser:
-     if p['id']== id:
-         return p
+#  for p in myUser:
+#      if p['id']== id:
+#          return p
          
 
 
-def findPostForById(id):
-    for i,p in enumerate(myUser):
-        if p['id']==id:
-            return i
+# def findPostForById(id):
+#     for i,p in enumerate(myUser):
+#         if p['id']==id:
+#             return i
           
           
 app.include_router(post.router)          
